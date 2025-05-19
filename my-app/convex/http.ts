@@ -3,9 +3,9 @@ import {WebhookEvent} from "@clerk/nextjs/server";
 import {Webhook} from "svix";
 import {api} from "./_generated/api";
 import {httpAction} from "./_generated/server";
-import { request } from "http";
+import {request} from "http";
 
-const http = httpRouter()
+const http = httpRouter();
 http.route({
     path:"/clerk-webhook",
     method:"POST",
@@ -22,6 +22,7 @@ http.route({
                 status:400,
             });
         }
+        
         const payload = await request.json();
         const body = JSON.stringify(payload);
         const wh = new Webhook(webhookSecret);
@@ -36,20 +37,26 @@ http.route({
             console.error("Error verifying webhook:",err);
             return new Response("Error occurred",{status:400});
         }
+
         const eventType = evt.type;
         if(eventType === "user.created"){
             const {id,first_name,last_name,image_url,email_addresses} = evt.data;
             const email = email_addresses[0].email_address;
             const name=`${first_name || ""}${last_name || ""}`.trim();
+            
             try{
                 await ctx.runMutation(api.users.syncUser,{
-                    email,name,image:image_url,clerk_id:id,
-                });
+                    email,name,image:image_url,clerkId:id,
+                })
             }catch(error){
                 console.log("Error while creating user",error);
                 return new Response("Error while creating user",{status:500});
             }
         }
-    })
-})
+        return new Response("WQebhook processed succesfully",{status:200})
+
+    }),
+});
+
+export default http;
 
